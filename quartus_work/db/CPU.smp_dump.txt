@@ -1,0 +1,15 @@
+
+State Machine - |CPU|mipsmulti:mipsmulti|controller:c|maindec:md|state
+Name state.JEX state.ADDIWB state.ADDIEX state.BEQEX state.RTYPEWB state.RTYPEEX state.MEMWR state.MEMWB state.MEMRD state.MEMADR state.DECODE state.FETCH 
+state.FETCH 0 0 0 0 0 0 0 0 0 0 0 0 
+state.DECODE 0 0 0 0 0 0 0 0 0 0 1 1 
+state.MEMADR 0 0 0 0 0 0 0 0 0 1 0 1 
+state.MEMRD 0 0 0 0 0 0 0 0 1 0 0 1 
+state.MEMWB 0 0 0 0 0 0 0 1 0 0 0 1 
+state.MEMWR 0 0 0 0 0 0 1 0 0 0 0 1 
+state.RTYPEEX 0 0 0 0 0 1 0 0 0 0 0 1 
+state.RTYPEWB 0 0 0 0 1 0 0 0 0 0 0 1 
+state.BEQEX 0 0 0 1 0 0 0 0 0 0 0 1 
+state.ADDIEX 0 0 1 0 0 0 0 0 0 0 0 1 
+state.ADDIWB 0 1 0 0 0 0 0 0 0 0 0 1 
+state.JEX 1 0 0 0 0 0 0 0 0 0 0 1 
