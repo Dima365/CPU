@@ -70,7 +70,7 @@ module maindec(input  logic [5:0] op,
                output logic [1:0] aluop);
 
   logic [8:0] controls;
-  // op == 6'b010000 пускай для всех команд  coprocessor_0
+
   always_comb
     if(overflow)
         int_cause = 3'b001;//арифметическое переполение
@@ -112,10 +112,6 @@ module maindec(input  logic [5:0] op,
 
   always_comb
     case(op)
-        // я думаю, может возникнуть проблема при pcsrcD == 1, так как
-        // instrD == 0 и следовательно возникнит regwrite == 1. 
-        // Это приведет к записи в регистровый файл. Необходимо изменить opcode
-        // RTYPE команды на не нулевой.  
       6'b000000: controls <= 11'b11000000010; // RTYPE
       6'b100011: controls <= 11'b10100010000; // LW
       6'b101011: controls <= 11'b00101000000; // SW
@@ -127,9 +123,18 @@ module maindec(input  logic [5:0] op,
                     controls <= 11'b11000100000; //чтение из c0
                  else                                            
                     controls <= 0;
-      6'b111100: controls <= 11'b01000000000; // запись в c0
-      6'b111000: controls <= 11'b00000001000; //jump_reg with exit_kernel
+      6'b111100: if(kernel_mode)
+                    controls <= 11'b01000000000; // запись в c0
+                 else 
+                    controls <= 0;
+      6'b111000: if(kernel_mode)
+                    controls <= 11'b00000001000; //jump_reg with exit_kernel
+                 else 
+                    controls <= 0;
+
       6'b110000: controls <= 11'b00000001000; //jump_reg
+
+      6'b110001: controls <= 11'b00000000000; // nop
 
       default:   controls <= 11'b00000000000; // illegal op
     endcase

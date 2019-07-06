@@ -3,7 +3,7 @@ module coprocessor_0
     input  logic reset,
     input  logic clk,
 
-    input  logic        write_c0,
+    input  logic        write_c0W,
     input  logic [31:0] resultW,
     input  logic [4:0]  writeregW,
 

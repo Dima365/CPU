@@ -26,7 +26,7 @@ logic cause_write;
 logic exit_kernel;
 logic jump_reg;
 logic [31:0] c0D;
-logic write_c0;
+logic write_c0D;
 
 logic [1:0] forwardAD, forwardBD, 
 logic stall_D;
@@ -38,10 +38,11 @@ logic [2:0] alucontrolE;
 logic alusrcE;
 logic regdstE;
 
-
+logic [31:0] mux_c0E;
+logic write_c0E;
 logic flushE;
 logic overflowE;
-logic [1:0] forwardAE, forwardBE;
+logic [2:0] forwardAE, forwardBE;
 logic [31:0] signimmE, rd1E, rd2E;
 logic [4:0] rsE, rtE, rdE, writeregE;
 logic [31:0] srcAE, srcBE;
@@ -52,6 +53,7 @@ logic regwriteM;
 logic [1:0] memtoregM;
 logic memwriteM;
 
+logic write_c0M;
 logic [31:0] aluoutM, writedataM, readdataM;
 logic [4:0] writeregM;
 logic [31:0] c0M;
@@ -59,6 +61,7 @@ logic [31:0] c0M;
 logic regwriteW;
 logic [1:0] memtoregW;
 
+logic write_c0W;
 logic [31:0] readdataW, aluoutW, resultW;
 logic [4:0] writeregW;
 logic [31:0] c0W;
@@ -78,6 +81,8 @@ modport imem(
 always_ff @(posedge reset, posedge clk)
     if(reset) 
         pcF <= 0;
+    else if(cause_write)
+        pcF <= 32'h33333333;// ??? куда ???
     else if(jump_reg)
         pcF <= rd1D;
     else if(jumpD)
@@ -107,6 +112,8 @@ modport controller(
                     output jump_reg
                     input  overflowE,
                     input  kernel_mode,
+                    output write_c0D,
+
                     
                     output regwriteD,
                     output memtoregD,
@@ -120,7 +127,7 @@ modport controller(
 
 modport coprocessor_0(
 
-                        input  write_c0,
+                        input  write_c0W,
                         input  resultW,
                         input  writeregW,
 
@@ -135,11 +142,15 @@ modport coprocessor_0(
 
 always_ff @(posedge reset, posedge clk)
     if(reset) begin 
-        instrD   <= 0;
+        instrD   <= {6'b110001, 26'd0}; // nop
+        pcplus4D <= 0;
+    end
+    else if(cause_write)begin 
+        instrD   <= {6'b110001, 26'd0}; // nop
         pcplus4D <= 0;
     end
     else if(pcsrcD) begin 
-        instrD   <= 0;
+        instrD   <= {6'b110001, 26'd0}; // nop
         pcplus4D <= 0;
     end
     else if(~stall_D) begin 
@@ -174,6 +185,7 @@ always_ff @(posedge reset, posedge clk)
         alucontrolE <= 0;
         alusrcE     <= 0;
         regdstE     <= 0;
+        write_c0E   <= 0;
     end
     else if(flushE)begin 
         regwriteE   <= 0;
@@ -182,6 +194,7 @@ always_ff @(posedge reset, posedge clk)
         alucontrolE <= 0;
         alusrcE     <= 0;
         regdstE     <= 0;
+        write_c0E   <= 0;
     end
     else begin 
         regwriteE   <= regwriteD;
@@ -189,7 +202,8 @@ always_ff @(posedge reset, posedge clk)
         memwriteE   <= memwriteD;
         alucontrolE <= alucontrolD;
         alusrcE     <= alusrcD;
-        regdstE     <= regdstD;  
+        regdstE     <= regdstD;
+        write_c0E   <= write_c0D;  
     end
 
 always_ff @(posedge reset, posedge clk)
@@ -222,11 +236,20 @@ always_ff @(posedge reset, posedge clk)
     end
 
 always_comb
+    if(memtoregE == 2'b10 && write_c0M && writeregE == writeregM)
+        mux_c0E = c0M;
+    else if(memtoregE == 2'b10 && write_c0W && writeregE == writeregW)
+        mux_c0E = c0W;
+    else 
+        mux_c0E = c0E;
+
+always_comb
     case (forwardAE)
-        2'b00: srcAE = rd1E;
-        2'b01: srcAE = resultW;
-        2'b10: srcAE = aluoutM;
-        2'b11: srcAE = c0M;  
+        3'b000: srcAE = rd1E;
+        3'b001: srcAE = resultW;
+        3'b010: srcAE = aluoutM;
+        3'b011: srcAE = c0M;  
+        3'b100: srcAE = c0W;
         default : srcAE = 0;
       endcase  
 
@@ -235,10 +258,11 @@ always_comb
         srcBE = signimmE;
     else 
         case (forwardBE)
-            2'b00: srcBE = rd2E;
-            2'b01: srcBE = resultW;
-            2'b10: srcBE = aluoutM;
-            2'b11: srcBE = c0M;
+            3'b000: srcBE = rd2E;
+            3'b001: srcBE = resultW;
+            3'b010: srcBE = aluoutM;
+            3'b011: srcBE = c0M;
+            3'b100: srcBE = c0W;
             default : srcBE = 0;
         endcase
 
@@ -246,9 +270,11 @@ assign writeregE  = regdstE ? rdE : rtE;
 
 always_comb
     case (forwardBE)
-        2'b00: writedataE = rd2E;
-        2'b01: writedataE = resultW;
-        2'b10: writedataE = aluoutM;
+        3'b000: writedataE = rd2E;
+        3'b001: writedataE = resultW;
+        3'b010: writedataE = aluoutM;
+        3'b011: writedataE = c0M;
+        3'b100: writedataE = c0W;
         default : writedataE = 0;
     endcase   
 
@@ -264,11 +290,13 @@ always_ff @(posedge reset, posedge clk)
         regwriteM <= 0;
         memtoregM <= 0;
         memwriteM <= 0;
+        write_c0M <= 0;
     end
     else begin 
         regwriteM <= regwriteE;
         memtoregM <= memtoregE;
         memwriteM <= memwriteE;
+        write_c0M <= write_c0E;
     end
 
 always_ff @(posedge reset, posedge clk)
@@ -281,7 +309,7 @@ always_ff @(posedge reset, posedge clk)
         aluoutM    <= aluoutE;
         writedataM <= writedataE;
         writeregM  <= writeregE;
-        c0M        <= c0E;      
+        c0M        <= mux_c0E;      
     end
 
 // WRITEBACK
@@ -289,10 +317,12 @@ always_ff @(posedge reset, posedge clk)
     if(reset)begin 
         regwriteW <= 0;
         memtoregW <= 0;
+        write_c0W <= 0;
     end
     else begin 
         regwriteW <= regwriteM;
-        memtoregW <= memtoregM;        
+        memtoregW <= memtoregM;
+        write_c0W <= write_c0M;        
     end
 
 always_ff @(posedge reset, posedge clk)
@@ -331,23 +361,27 @@ always_ff @(posedge reset, posedge clk)
 //=========================================
 always_comb
     if(rsE !=0 && rsE == writeregM && regwriteM && memtoregM == 2'b10)
-        forwardAE = 2'b11;
+        forwardAE = 3'b011;
+    else if(rsE !=0 && rsE == writeregW && regwriteW && memtoregW == 2'b10)
+        forwardAE = 3'b100;
     else if(rsE !=0 && rsE == writeregM && regwriteM)
-        forwardAE = 2'b10;
+        forwardAE = 3'b010;
     else if(rsE !=0 && rsE == writeregW && regwriteW)
-        forwardAE = 2'b01;
+        forwardAE = 3'b001;
     else 
-        forwardAE = 2'b00;
+        forwardAE = 3'b000;
 
 always_comb
     if(rtE !=0 && rtE == writeregM && regwriteM && memtoregM == 2'b10)
-        forwardBE = 2'b11;
+        forwardBE = 3'b011;
+    else if(rtE !=0 && rtE == writeregW && regwriteW && memtoregW == 2'b10)
+        forwardBE = 3'b100;
     else if(rtE !=0 && rtE == writeregM && regwriteM)
-        forwardBE = 2'b10;
+        forwardBE = 3'b010;
     else if(rtE !=0 && rtE == writeregW && regwriteW)
-        forwardBE = 2'b01;
+        forwardBE = 3'b001;
     else 
-        forwardBE = 2'b00;
+        forwardBE = 3'b000;
 
 always_comb
     if((rsD == rtE || rtD == rtE) 
