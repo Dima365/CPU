@@ -1,18 +1,21 @@
-module alu(input  logic [31:0] a, b,
+module alu(
+           input  logic        alusrcE, // для overflow
+           input  logic [31:0] a, b,
            input  logic [2:0]  alucontrol,
            output logic [31:0] result,
            output logic        overflow,
            output logic        zero);
-
+  logic over;
   logic [31:0] condinvb, condinvb_plus1, sum;
 
   assign condinvb = alucontrol[2] ? ~b : b;
   assign condinvb_plus1 = condinvb + alucontrol[2];
-  assign sum = a + condinvb_plus1;
+  assign {over,sum} = a + condinvb_plus1;
+
 
   always_comb
-    if(alucontrol[2:1] == 2'b11)
-        overflow = ~b[31];
+    if(alucontrol == 3'b010 && over && ~(alusrcE && b[15]) )
+        overflow = 1'b1;
     else if(alucontrol[2:1] == 2'b11 && a[31] && condinvb_plus1[31])
         overflow = ~sum[31];  
     else if(alucontrol[2:1] == 2'b11 && ~a[31] && ~condinvb_plus1[31])

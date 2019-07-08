@@ -1,6 +1,7 @@
 module controller(input  logic [5:0] op, funct,
                   input  logic       zero,
-                  output logic [1:0] memtoreg, memwrite,
+                  output logic [1:0] memtoreg, 
+                  output logic       memwrite,
  //                 output logic       pcsrc, alusrc,
                   
                   output logic [2:0] int_cause,
@@ -31,7 +32,7 @@ module controller(input  logic [5:0] op, funct,
                 .cause_write    (cause_write),
                 .exit_kernel    (exit_kernel),
                 .jump_reg       (jump_reg),
-                .write_c0       (write_c0)
+                .write_c0       (write_c0),
 
                 .memtoreg       (memtoreg), 
                 .memwrite       (memwrite), 
@@ -69,15 +70,14 @@ module maindec(input  logic [5:0] op,
                output logic       jump,
                output logic [1:0] aluop);
 
-  logic [8:0] controls;
+  logic [10:0] controls;
 
   always_comb
     if(overflow)
         int_cause = 3'b001;//арифметическое переполение
     else if((op == 6'b010000 ||
             op == 6'b111100 ||
-            op == 6'b111000 ||
-            op == 6'b110000) && kernel_mode) 
+            op == 6'b111000) && kernel_mode) 
         
         int_cause = 3'b010; // спец команда в режиме пользователя 
     
@@ -100,6 +100,7 @@ module maindec(input  logic [5:0] op,
             6'b111100: int_cause = 0; //запись в c0
             6'b111000: int_cause = 0; //jump_reg with exit_kernel
             6'b110000: int_cause = 0; //jump_reg
+            6'b110001: int_cause = 0; //nop
             default:   int_cause = 3'b011; // illegal op
         endcase
 
@@ -120,11 +121,11 @@ module maindec(input  logic [5:0] op,
       6'b000010: controls <= 11'b00000000100; // J
  
       6'b010000: if(kernel_mode)
-                    controls <= 11'b11000100000; //чтение из c0
+                    controls <= 11'b11000100000; //movrf переместить в р.файл
                  else                                            
                     controls <= 0;
       6'b111100: if(kernel_mode)
-                    controls <= 11'b01000000000; // запись в c0
+                    controls <= 11'b01000000000; // movc0 переместить в с0
                  else 
                     controls <= 0;
       6'b111000: if(kernel_mode)
@@ -132,7 +133,7 @@ module maindec(input  logic [5:0] op,
                  else 
                     controls <= 0;
 
-      6'b110000: controls <= 11'b00000001000; //jump_reg
+      6'b110000: controls <= 11'b00000001000; //jr
 
       6'b110001: controls <= 11'b00000000000; // nop
 

@@ -1,4 +1,5 @@
-module regfile(input  logic        clk, 
+module regfile(input  logic        clk,
+               input  logic        reset, 
                input  logic        we3, 
                input  logic [4:0]  ra1, ra2, wa3, 
                input  logic [31:0] wd3, 
@@ -13,8 +14,16 @@ module regfile(input  logic        clk,
   // note: for pipelined processor, write third port
   // on falling edge of clk
 
-  always_ff @(negedge clk)
-    if (we3) rf[wa3] <= wd3;    
+generate
+  for (genvar i = 0; i < 32; i++) begin
+    always_ff @(posedge reset, negedge clk)
+        if(reset)
+            rf[i] <= 0;    
+        else if (we3 && i == wa3) 
+            rf[i] <= wd3;
+  end    
+endgenerate
+    
 
   assign rd1 = (ra1 != 0) ? rf[ra1] : 0;
   assign rd2 = (ra2 != 0) ? rf[ra2] : 0;

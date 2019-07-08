@@ -4,7 +4,7 @@ interface main_bus
     input  logic reset
 );
 //FETCH
-logic [31:0] pc, pcF, pcplus4F, instrF;
+logic [31:0] pcF, pcplus4F, instrF;
 logic stall_F;
 //DECODE
 logic regwriteD;
@@ -24,11 +24,11 @@ logic kernel_mode;
 logic [2:0] int_cause;
 logic cause_write;
 logic exit_kernel;
-logic jump_reg;
+logic jump_regD;
 logic [31:0] c0D;
 logic write_c0D;
 
-logic [1:0] forwardAD, forwardBD, 
+
 logic stall_D;
 //EXECUTE
 logic regwriteE;
@@ -68,7 +68,7 @@ logic [31:0] c0W;
 
 //BYPASS
 logic [31:0] AD_mux_out, BD_mux_out;
-
+logic jump_en;
 
 /////////////////////////////////////////
 
@@ -83,9 +83,9 @@ always_ff @(posedge reset, posedge clk)
         pcF <= 0;
     else if(cause_write)
         pcF <= 32'h33333333;// ??? куда ???
-    else if(jump_reg)
+    else if(jump_regD && jump_en)
         pcF <= rd1D;
-    else if(jumpD)
+    else if(jumpD && jump_en)
         pcF <= pcjumpD;
     else if(~stall_F && pcsrcD) 
         pcF <= pcbranchD;
@@ -109,7 +109,7 @@ modport controller(
                     output int_cause,
                     output cause_write,
                     output exit_kernel,
-                    output jump_reg
+                    output jump_regD,
                     input  overflowE,
                     input  kernel_mode,
                     output write_c0D,
@@ -137,8 +137,8 @@ modport coprocessor_0(
                         input  rtD,
                         output c0D,
                         output kernel_mode,
-                        input  exit_kernel,    
-                    )
+                        input  exit_kernel    
+                    );
 
 always_ff @(posedge reset, posedge clk)
     if(reset) begin 
@@ -171,6 +171,8 @@ assign pcsrcD = equalD & branchD;
 
 //EXECUTE
 modport alu(
+                    input alusrcE, // для overflow
+
                     input srcAE, srcBE,
                     input alucontrolE,
                     output overflowE,
@@ -304,6 +306,7 @@ always_ff @(posedge reset, posedge clk)
         aluoutM    <= 0;
         writedataM <= 0;
         writeregM  <= 0;
+        c0M        <= 0;
     end
     else begin 
         aluoutM    <= aluoutE;
@@ -330,12 +333,13 @@ always_ff @(posedge reset, posedge clk)
         readdataW <= 0;
         aluoutW   <= 0;
         writeregW <= 0;
+        c0W       <= 0;
     end
     else begin 
         readdataW <= readdataM;
         aluoutW   <= aluoutM;
         writeregW <= writeregM;
-        c0W       <= c0M     
+        c0W       <= c0M;     
     end
 
 always_comb
@@ -349,16 +353,15 @@ always_comb
 
 // BYPASS
 
-// стоит подумать как сделать это красиво
-//=========================================
-logic jump_delay;
-
 always_ff @(posedge reset, posedge clk)
     if(reset)
-        jump_delay <= 0;
-    else
-        jump_delay <= jumpD;
-//=========================================
+        jump_en <= 1;
+    else if(~jump_en)
+        jump_en <= 1;
+    else if(jump_en && (jumpD || jump_regD)) 
+        jump_en <= 0;
+
+
 always_comb
     if(rsE !=0 && rsE == writeregM && regwriteM && memtoregM == 2'b10)
         forwardAE = 3'b011;
@@ -390,10 +393,10 @@ always_comb
                 stall_D = 1;
                 flushE  = 1;
     end
-    else if((jumpD || jump_reg) && ~jump_delay) begin
-        stall_F = 0;// подумать над этим !!!!!!!!!!!!!!!!              
+    else if( (jumpD || jump_regD) && jump_en) begin
+        stall_F = 0;            
         stall_D = 1;
-        flushE  = 1;
+        flushE  = 0;
     end
     else if(branchD   && regwriteE && 
             (writeregE == rsD || writeregE == rtD))begin
@@ -402,7 +405,7 @@ always_comb
                 flushE  = 1;        
     end
     else if(branchD   &&  memtoregM == 2'b01 && 
-            (writeregM == rsD && writeregM == rtD))begin
+            (writeregM == rsD || writeregM == rtD))begin
                 stall_F = 1;
                 stall_D = 1;
                 flushE  = 1;        
@@ -431,6 +434,6 @@ always_comb
     else if(rtD != 0 && rtD == writeregM && regwriteM)
         BD_mux_out = aluoutM;
     else
-        BD_mux_out = rd1D;
+        BD_mux_out = rd2D;
 
 endinterface// main_bus

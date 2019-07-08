@@ -49,7 +49,7 @@ always_ff @(posedge reset, posedge clk)
 always_ff @(posedge reset, negedge clk)//!!!!!!!!!!!!!!!!!!!!!!!!
     if(reset)
         point_table <= 0;
-    else if(write_c0 && writeregW == 5'b00011)
+    else if(write_c0W && writeregW == 5'b00011)
         point_table <= resultW;
 
 always_comb
