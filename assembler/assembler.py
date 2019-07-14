@@ -1,5 +1,5 @@
 mnem_opcode = [ 'addi',   'or',     'and',    'add',    'beq',    'slt',
-                'sub',    'sw',     'lw',     'j',      'jr',     'jrek',
+                'sub',    'sw',     'lw',     'j',      'jr',     'exk',
                 'movc0',  'movrf',  'nop'] 
 opcode      = [ '001000', '000000', '000000', '000000', '000100', '000000',
                 '000000', '101011', '100011', '000010', '110000', '111000',
@@ -12,8 +12,8 @@ funct     = ['100101', '100100', '100000', '101010', '100010']
 list_reg = ['$0',  '$at', 
             '$v0', '$v1', 
             '$a0', '$a1', '$a2', '$a3',
-            '$t0', '$t1', '$t2', '$t3', '$t4', '$t5', '$t6', '$t7'
-            '$s0', '$s1', '$s2', '$s3', '$s4', '$s5', '$s6', '$s7'
+            '$t0', '$t1', '$t2', '$t3', '$t4', '$t5', '$t6', '$t7',
+            '$s0', '$s1', '$s2', '$s3', '$s4', '$s5', '$s6', '$s7',
             '$t8', '$t9',
             '$k0', '$k1',
             'gp',  'sp',  'fp',  'ra']
@@ -106,7 +106,7 @@ def Jtype(line): # j команда
     return com_list
 
 def jrCom(line):   # jr прыжок по регистру, 
-    com_list = []  # а также для прыжка с выходом из реж.ядра 
+    com_list = []  
     reg = line[1]     
     for i in range(0,len(list_reg)):
         if reg == list_reg[i]:
@@ -116,7 +116,8 @@ def jrCom(line):   # jr прыжок по регистру,
 
 def movrfCom(line): # переместить в рег.файл
     com_list = []  
-    reg = line[1]     
+    com_list.append(format(0, '05b'))     
+    reg = line[1]
     for i in range(0,len(list_reg_c0)):
         if reg == list_reg_c0[i]:
             com_list.append(format(i, '05b'))
@@ -124,10 +125,10 @@ def movrfCom(line): # переместить в рег.файл
     for i in range(0,len(list_reg)):
         if reg == list_reg[i]:
             com_list.append(format(i, '05b'))
-    com_list.append(format(0, '016b'))
+    com_list.append(format(0, '011b'))
     return com_list
 
-def movc0fCom(line): # переместить в c0
+def movc0Com(line): # переместить в c0
     com_list = []  
     reg = line[1]     
     for i in range(0,len(list_reg)):
@@ -141,6 +142,11 @@ def movc0fCom(line): # переместить в c0
     return com_list         
 
 def nopCom(line):   # nop ничего не делать 
+    com_list = []       
+    com_list.append(format(0, '026b'))
+    return com_list
+
+def exkCom(line):   # nop ничего не делать 
     com_list = []       
     com_list.append(format(0, '026b'))
     return com_list
@@ -233,7 +239,7 @@ for line in f_read:
         command  = ''.join(com_list)
         f_write.write(format(int(command, 2), '08x') + '\n')
     elif com_list[0] == '111000': # различие в opcode 
-        com_list = com_list + jrCom(line)
+        com_list = com_list + exkCom(line)
         command  = ''.join(com_list)
         f_write.write(format(int(command, 2), '08x') + '\n')
     elif com_list[0] == '010000':
@@ -241,7 +247,7 @@ for line in f_read:
         command  = ''.join(com_list)
         f_write.write(format(int(command, 2), '08x') + '\n')
     elif com_list[0] == '111100':
-        com_list = com_list + movc0fCom(line)
+        com_list = com_list + movc0Com(line)
         command  = ''.join(com_list)
         f_write.write(format(int(command, 2), '08x') + '\n')
     elif com_list[0] == '110001':

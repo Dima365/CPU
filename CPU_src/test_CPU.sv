@@ -16,7 +16,7 @@ initial begin
 	#50 reset = 1;
 	#35 reset = 0;
 
-	#1000 $stop; 
+	#3000 $stop; 
 end
 
 always

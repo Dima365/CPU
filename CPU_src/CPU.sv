@@ -63,7 +63,7 @@ coprocessor_0 c0
 
 imem mem_instr
 	(
-		.a  			(bus.imem.pcF[7:2]),
+		.a  			(bus.imem.pcF[31:2]),
 		.rd             (bus.imem.instrF)
 	);
 

@@ -96,11 +96,11 @@ module maindec(input  logic [5:0] op,
             6'b000100: int_cause = 0; // BEQ
             6'b001000: int_cause = 0; // ADDI
             6'b000010: int_cause = 0; // J
-            6'b010000: int_cause = 0; //mfc0
-            6'b111100: int_cause = 0; //запись в c0
-            6'b111000: int_cause = 0; //jump_reg with exit_kernel
-            6'b110000: int_cause = 0; //jump_reg
-            6'b110001: int_cause = 0; //nop
+            6'b010000: int_cause = 0; // movrf
+            6'b111100: int_cause = 0; // movc0
+            6'b111000: int_cause = 0; // exk
+            6'b110000: int_cause = 0; // jr
+            6'b110001: int_cause = 0; // nop
             default:   int_cause = 3'b011; // illegal op
         endcase
 
@@ -120,16 +120,16 @@ module maindec(input  logic [5:0] op,
       6'b001000: controls <= 11'b10100000000; // ADDI
       6'b000010: controls <= 11'b00000000100; // J
  
-      6'b010000: if(kernel_mode)
+      6'b010000: if(~kernel_mode)
                     controls <= 11'b11000100000; //movrf переместить в р.файл
                  else                                            
                     controls <= 0;
-      6'b111100: if(kernel_mode)
-                    controls <= 11'b01000000000; // movc0 переместить в с0
+      6'b111100: if(~kernel_mode)
+                    controls <= 11'b00000000000; // movc0 переместить в с0
                  else 
                     controls <= 0;
-      6'b111000: if(kernel_mode)
-                    controls <= 11'b00000001000; //jump_reg with exit_kernel
+      6'b111000: if(~kernel_mode)
+                    controls <= 11'b00000000000; //exit kernel mode
                  else 
                     controls <= 0;
 

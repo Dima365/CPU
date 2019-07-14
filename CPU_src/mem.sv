@@ -12,13 +12,13 @@ module dmem(input  logic        clk, we,
 endmodule// dmem
 
 
-module imem(input  logic [5:0] a,
+module imem(input  logic [29:0] a,
             output logic [31:0] rd);
 
-  logic [31:0] RAM[63:0];
+  logic [31:0] RAM[127:0];
 
   initial
-      $readmemh("memfile.dat",RAM);
+      $readmemh("/media/sf_CPU/assembler/check_new_comANDhazard_bin.dat",RAM);
 
   assign rd = RAM[a]; // word aligned
 endmodule// imem

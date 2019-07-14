@@ -1,0 +1,75 @@
+addi   $t2 $0 7
+movc0  $t2 pt
+nop
+nop
+nop
+movrf  pt  $t3
+addi   $t4 $t3 3
+nop
+nop
+nop
+movrf  pt  $t6
+nop
+addi   $t7 $t6 12
+nop
+nop
+nop
+movrf  pt  $t2
+movc0  $t2 pt
+nop
+nop
+nop
+movrf  pt  $t2
+nop
+movc0  $t2 pt
+nop
+nop
+nop
+movrf  pt  $t4
+addi   $t4 $t3 4
+movc0  $t4 pt
+nop
+nop
+nop
+addi   $t5 $0 160
+jr     $t5
+nop
+nop
+nop
+nop
+nop
+addi   $t6 $0 188 
+nop
+jr     $t6
+nop
+nop
+nop
+nop
+addi   $t6 $t6 -188 
+beq    $t6 $0 break_1
+nop
+nop
+nop
+nop
+break_1:
+addi   $t5 $t5 -160
+nop
+beq    $t5 $0 break_2
+nop
+nop
+nop
+nop
+nop
+break_2:
+addi   $t3 $t3 -7
+nop
+nop
+beq    $t3 $0 break_3
+nop
+nop
+nop
+nop
+break_3:
+addi   $t7 $0 132
+exk
+jr     $t7

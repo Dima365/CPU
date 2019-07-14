@@ -68,7 +68,7 @@ logic [31:0] c0W;
 
 //BYPASS
 logic [31:0] AD_mux_out, BD_mux_out;
-logic jump_en;
+
 
 /////////////////////////////////////////
 
@@ -83,9 +83,9 @@ always_ff @(posedge reset, posedge clk)
         pcF <= 0;
     else if(cause_write)
         pcF <= 32'h33333333;// ??? куда ???
-    else if(jump_regD && jump_en)
-        pcF <= rd1D;
-    else if(jumpD && jump_en)
+    else if(jump_regD)
+        pcF <= AD_mux_out;
+    else if(jumpD)
         pcF <= pcjumpD;
     else if(~stall_F && pcsrcD) 
         pcF <= pcbranchD;
@@ -142,6 +142,14 @@ modport coprocessor_0(
 
 always_ff @(posedge reset, posedge clk)
     if(reset) begin 
+        instrD   <= {6'b110001, 26'd0}; // nop
+        pcplus4D <= 0;
+    end
+    else if(jump_regD && stall_D == 0)begin
+        instrD   <= {6'b110001, 26'd0}; // nop
+        pcplus4D <= 0;
+    end        
+    else if(jumpD)begin
         instrD   <= {6'b110001, 26'd0}; // nop
         pcplus4D <= 0;
     end
@@ -353,22 +361,14 @@ always_comb
 
 // BYPASS
 
-always_ff @(posedge reset, posedge clk)
-    if(reset)
-        jump_en <= 1;
-    else if(~jump_en)
-        jump_en <= 1;
-    else if(jump_en && (jumpD || jump_regD)) 
-        jump_en <= 0;
-
 
 always_comb
     if(rsE !=0 && rsE == writeregM && regwriteM && memtoregM == 2'b10)
         forwardAE = 3'b011;
-    else if(rsE !=0 && rsE == writeregW && regwriteW && memtoregW == 2'b10)
-        forwardAE = 3'b100;
     else if(rsE !=0 && rsE == writeregM && regwriteM)
         forwardAE = 3'b010;
+    else if(rsE !=0 && rsE == writeregW && regwriteW && memtoregW == 2'b10)
+        forwardAE = 3'b100;
     else if(rsE !=0 && rsE == writeregW && regwriteW)
         forwardAE = 3'b001;
     else 
@@ -377,26 +377,26 @@ always_comb
 always_comb
     if(rtE !=0 && rtE == writeregM && regwriteM && memtoregM == 2'b10)
         forwardBE = 3'b011;
-    else if(rtE !=0 && rtE == writeregW && regwriteW && memtoregW == 2'b10)
-        forwardBE = 3'b100;
     else if(rtE !=0 && rtE == writeregM && regwriteM)
         forwardBE = 3'b010;
+    else if(rtE !=0 && rtE == writeregW && regwriteW && memtoregW == 2'b10)
+        forwardBE = 3'b100;
     else if(rtE !=0 && rtE == writeregW && regwriteW)
         forwardBE = 3'b001;
     else 
         forwardBE = 3'b000;
 
 always_comb
-    if((rsD == rtE || rtD == rtE) 
+    if((rsD == rtE || rtD == rtE) //здесь правильно 
             && memtoregE == 2'b01)begin
                 stall_F = 1;
                 stall_D = 1;
                 flushE  = 1;
     end
-    else if( (jumpD || jump_regD) && jump_en) begin
-        stall_F = 0;            
-        stall_D = 1;
-        flushE  = 0;
+    else if(jump_regD && regwriteE && rsD == writeregE) begin
+                stall_F = 0;
+                stall_D = 1;
+                flushE  = 0;
     end
     else if(branchD   && regwriteE && 
             (writeregE == rsD || writeregE == rtD))begin
