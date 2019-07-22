@@ -28,7 +28,7 @@ logic jump_regD;
 logic [31:0] c0D;
 logic write_c0D;
 
-
+logic [4:0] shamtD;
 logic stall_D;
 //EXECUTE
 logic regwriteE;
@@ -48,6 +48,8 @@ logic [4:0] rsE, rtE, rdE, writeregE;
 logic [31:0] srcAE, srcBE;
 logic [31:0] aluoutE, writedataE;
 logic [31:0] c0E;
+
+logic [4:0] shamtE;
 //MEMORY
 logic regwriteM;
 logic [1:0] memtoregM;
@@ -82,7 +84,7 @@ always_ff @(posedge reset, posedge clk)
     if(reset) 
         pcF <= 0;
     else if(cause_write)
-        pcF <= 32'h33333333;// ??? куда ???
+        pcF <= 32'd72;// ??? куда ???
     else if(jump_regD)
         pcF <= AD_mux_out;
     else if(jumpD)
@@ -174,7 +176,7 @@ assign rsD = instrD[25:21];
 assign rtD = instrD[20:16];
 assign rdD = instrD[15:11];
 assign pcsrcD = equalD & branchD;
-
+assign shamtD = instrD[10:6];
 
 
 //EXECUTE
@@ -197,7 +199,7 @@ always_ff @(posedge reset, posedge clk)
         regdstE     <= 0;
         write_c0E   <= 0;
     end
-    else if(flushE)begin 
+    else if(flushE || cause_write)begin 
         regwriteE   <= 0;
         memtoregE   <= 0;
         memwriteE   <= 0;
@@ -225,15 +227,17 @@ always_ff @(posedge reset, posedge clk)
         rdE      <= 0;
         signimmE <= 0;
         c0E      <= 0;
+        shamtE   <= 0;
     end
-    else if(flushE) begin
+    else if(flushE || cause_write) begin
         rd1E     <= 0;
         rd2E     <= 0; 
         rsE      <= 0;
         rtE      <= 0;
         rdE      <= 0;
         signimmE <= 0;
-        c0E      <= 0;      
+        c0E      <= 0;
+        shamtE   <= 0;      
     end
     else begin 
         rd1E     <= rd1D;
@@ -243,6 +247,7 @@ always_ff @(posedge reset, posedge clk)
         rdE      <= rdD;
         signimmE <= signimmD;
         c0E      <= c0D;
+        shamtE   <= shamtD;
     end
 
 always_comb
@@ -302,6 +307,12 @@ always_ff @(posedge reset, posedge clk)
         memwriteM <= 0;
         write_c0M <= 0;
     end
+    else if(overflowE)begin
+        regwriteM <= 0;
+        memtoregM <= 0;
+        memwriteM <= 0;
+        write_c0M <= 0;
+    end
     else begin 
         regwriteM <= regwriteE;
         memtoregM <= memtoregE;
@@ -311,6 +322,12 @@ always_ff @(posedge reset, posedge clk)
 
 always_ff @(posedge reset, posedge clk)
     if(reset)begin 
+        aluoutM    <= 0;
+        writedataM <= 0;
+        writeregM  <= 0;
+        c0M        <= 0;
+    end
+    else if(overflowE)begin
         aluoutM    <= 0;
         writedataM <= 0;
         writeregM  <= 0;

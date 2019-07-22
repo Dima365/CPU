@@ -18,7 +18,7 @@ module imem(input  logic [29:0] a,
   logic [31:0] RAM[127:0];
 
   initial
-      $readmemh("/media/sf_CPU/assembler/check_new_comANDhazard_bin.dat",RAM);
+      $readmemh("/media/sf_CPU/assembler/interrupts_bin.txt",RAM);
 
   assign rd = RAM[a]; // word aligned
 endmodule// imem

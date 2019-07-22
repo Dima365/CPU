@@ -84,6 +84,7 @@ module maindec(input  logic [5:0] op,
     else // неопознанная  команда 
         case (op)
             6'b000000: case(funct)          // R-type instructions
+                        6'b000000: int_cause = 0; // sll
                         6'b100000: int_cause = 0; // add
                         6'b100010: int_cause = 0; // sub
                         6'b100100: int_cause = 0; // and
@@ -153,6 +154,7 @@ module aludec(input  logic [5:0] funct,
       2'b00: alucontrol <= 3'b010;  // add (for lw/sw/addi)
       2'b01: alucontrol <= 3'b110;  // sub (for beq)
       default: case(funct)          // R-type instructions
+          6'b000000: alucontrol <= 3'b011; // sll
           6'b100000: alucontrol <= 3'b010; // add
           6'b100010: alucontrol <= 3'b110; // sub
           6'b100100: alucontrol <= 3'b000; // and

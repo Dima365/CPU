@@ -98,6 +98,7 @@ alu alu_i
 		.a           	(bus.srcAE),
 		.b              (bus.srcBE),
 		.alucontrol     (bus.alucontrolE),
+        .shamt          (bus.shamtE),
 		.result         (bus.aluoutE),
         .overflow       (bus.overflowE),
 		.zero           ()

@@ -1,12 +1,12 @@
 mnem_opcode = [ 'addi',   'or',     'and',    'add',    'beq',    'slt',
                 'sub',    'sw',     'lw',     'j',      'jr',     'exk',
-                'movc0',  'movrf',  'nop'] 
+                'movc0',  'movrf',  'nop',    'sll'] 
 opcode      = [ '001000', '000000', '000000', '000000', '000100', '000000',
                 '000000', '101011', '100011', '000010', '110000', '111000',
-                '111100', '010000', '110001']
+                '111100', '010000', '110001', '000000']
 
-mnem_Rcom = ['or',     'and',    'add',    'slt',    'sub'   ]
-funct     = ['100101', '100100', '100000', '101010', '100010']
+mnem_Rcom = ['or',     'and',    'add',    'slt',    'sub',    'sll']
+funct     = ['100101', '100100', '100000', '101010', '100010', '000000']
 
 
 list_reg = ['$0',  '$at', 
@@ -151,6 +151,28 @@ def exkCom(line):   # nop ничего не делать
     com_list.append(format(0, '026b'))
     return com_list
 
+def sllCom(line):  
+    com_list = []
+
+    for i in range(0,len(list_reg)):
+        if line[2] == list_reg[i]:
+            com_list.append(format(i, '05b')) # rs
+
+    com_list.append('00000') # rt
+
+    for i in range(0,len(list_reg)):
+        if line[1] == list_reg[i]:
+            com_list.append(format(i, '05b')) #rd
+
+    com_list.append(format(int(line[3]), '05b')) # shamt
+
+    for i in range(0,len(mnem_Rcom)):
+        if line[0] == mnem_Rcom[i]:
+            com_list.append(funct[i]) # funct
+
+    return com_list
+
+
 def prepare_line(line):  # читает строку из файла и разбивает на элементы
     line = line.rstrip() # пример: add $s2 $t1 $t2 - строка в файле
     line = line.lstrip() # функция возращает список ['add','$s2','$t1','$t2']
@@ -215,8 +237,12 @@ for line in f_read:
     
     current_line_number = current_line_number + 1
     if com_list[0] == '000000':
-        com_list = com_list + Rtype(line)
-        command  = ''.join(com_list)
+        if line[0] == 'sll':
+            com_list = com_list + sllCom(line)
+            command  = ''.join(com_list)            
+        else:
+            com_list = com_list + Rtype(line)
+            command  = ''.join(com_list)
         f_write.write(format(int(command, 2), '08x') + '\n')        
     elif com_list[0] == '001000':
         com_list = com_list + Itype(line)
